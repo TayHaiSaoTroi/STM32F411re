@@ -12,6 +12,7 @@
 #include "Bit_math.h"
 #define PERIPHERAL_BASE		0x40000000
 #define RCC_BASE_ADDRESS	0x40023800
+#define PWR_BASE_ADDRESS	0x40007000
 
 
 /*define bit AHB1*/
@@ -37,6 +38,8 @@
 #define RCC_I2C2ENR	(1<<22U)
 #define RCC_I2C3ENR	(1<<23U)
 #define RCC_PWRENR		(1<<28U)
+
+#define PWR_CR_VOS	(1<<14U)
 
 /*define bit APB2*/
 
@@ -84,7 +87,11 @@ typedef struct
 	volatile uint32 DCKCFGR;//0x8C
 }RCC_t;
 
-
+typedef struct PWR
+{
+	volatile uint32 PWR_CR;
+	volatile uint32 PWR_CSR;
+}PWR_t;
 #define RCC_CR_HSEON	(1<<16U)
 #define RCC_CR_HSERDY	(1<<17U)
 #define RCC_CR_HSION	(1<<0U)
@@ -92,7 +99,7 @@ typedef struct
 #define RCC_CR_PLL		(1<<24U)
 #define RCC_CR_PLLRDY	(1<<25U)
 #define RCC_PLLCFGR_SRC_HSE	(1U<<22)
-#define RCC_PLLCFGR_SRC_HSI	(0U<<22)
+#define RCC_PLLCFGR_SRC_HSI	(0U)
 #define RCC_PLL_SW			(1U<<2)
 #define RCC_PLL_SWS			(1U<<4)
 #define RCC_HSE_SW			(1U<<1)
@@ -102,42 +109,32 @@ typedef struct
 #define RCC_CFGR_PLLM		(0U)
 #define RCC_CFGR_PLLN		(6U)
 #define RCC_CFGR_PLLP		(16U)
+#define RCC_CFGR_PLLQ		(24U)
 
 
 #define ON 				1
 #define OFF				0
 #define HSI_CLOCK_ENABLE	OFF
 #define HSE_CLOCK_ENABLE	ON
-#define PLL_CLOCK_ENABLE	OFF
-
-#define HSI_PLL_CLOCK 	ON
-#define HSE_PLL_CLOCK 	OFF
-extern uint8 PLL_M;
-extern uint8 PLL_N;
-extern uint8 PLL_P;
-//#if  HSI_PLL_CLOCK
-//PLL_M = 8;
-//PLL_N = 84;
-//PLL_P = 2;
-//#elif HSE_PLL_CLOCK
-//PLL_M = 4;
-//PLL_N = 84;
-//PLL_P = 2;
-//#endif
+#define HSECLOCKSPEED 8U
+#define HSICLOCKSPEED 16U
 
 
 // HPRE	AHB precaler
-#define HPRE_CLOCK_DIV_1	    (0b0000)
-#define HPRE_CLOCK_DIV_2		(0b1000)
-#define HPRE_CLOCK_DIV_4		(0b1001)
-#define HPRE_CLOCK_DIV_8		(0b1010)
-#define HPRE_CLOCK_DIV_16		(0b1011)
-#define HPRE_CLOCK_DIV_64		(0b1100)
-#define HPRE_CLOCK_DIV_128		(0b1101)
-#define HPRE_CLOCK_DIV_256		(0b1110)
-#define HPRE_CLOCK_DIV_512		(0b1111)
+#define HPRE_CLOCK_POS			(4U) // AHBP Prescaler
+#define HPRE_CLOCK_DIV_1	    0U
+#define HPRE_CLOCK_DIV_2		2U
+#define HPRE_CLOCK_DIV_4		4U
+#define HPRE_CLOCK_DIV_8		8U
+#define HPRE_CLOCK_DIV_16		16U
+#define HPRE_CLOCK_DIV_64		64U
+#define HPRE_CLOCK_DIV_128		128U
+#define HPRE_CLOCK_DIV_256		256U
+#define HPRE_CLOCK_DIV_512		512U
 
 //PPRE1 APB1 precaler // register 10
+
+#define PPRE1_CLOCK_POS			10U //APB1 Prescaler
 #define PPRE1_CLOCK_DIV1	(0b000)
 #define PPRE1_CLOCK_DIV2	(0b100)
 #define PPRE1_CLOCK_DIV4	(0b101)
@@ -145,6 +142,8 @@ extern uint8 PLL_P;
 #define PPRE1_CLOCK_DIV16	(0b111)
 
 // PPRE2 APB2 precaler // register 13
+
+#define PPRE2_CLOCK_POS			13U // APB2 Prescaler
 #define PPRE2_CLOCK_DIV1	(0b000)
 #define PPRE2_CLOCK_DIV2	(0b100)
 #define PPRE2_CLOCK_DIV4	(0b101)
@@ -161,12 +160,13 @@ extern uint8 PLL_P;
 /////////////////////////////////////////
 
 #define RCC	((volatile RCC_t *)RCC_BASE_ADDRESS)
+#define PWR	((volatile PWR_t *)PWR_BASE_ADDRESS)
 //RCC Phase clock loop
-void HAL_RCC_SetSystemClockByPLL(void);
+void HAL_RCC_SetSystemClockByPLL(uint32 SysClc, uint32 AHBPre, uint32 APB1Pre, uint32 APB2Pre);
 void HAL_RCC_SetSystemClockTo16Mhz(void);
 void HAL_RCC_SetSystemClockTo8Mhz(void);
-void HAL_RCC_SetSystemClock();
 
+uint32 HAL_RCC_SET_PLL_CLOCK();
 //GPIO Clock
 void HAL_GPIOA_ENABLE_CLOCK();
 void HAL_GPIOB_ENABLE_CLOCK();

@@ -4,48 +4,72 @@
  *  Created on: Nov 12, 2024
  *      Author: MinhTan
  */
+#include <HAL_STM32F411_FLASH.h>
 #include <HAL_STM32F411_RCC.h>
 
-void HAL_RCC_SetSystemClockByPLL(void)
+static void HAL_RCC_HSE_ON();
+static void HAL_RCC_HSI_ON();
+static void HAL_RCC_PLL_ON();
+
+void HAL_RCC_SetSystemClockByPLL(uint32 SysClc, uint32 AHBPre, uint32 APB1Pre, uint32 APB2Pre)
 {
-
-#if HSI_PLL_CLOCK
-SET_BIT(RCC->CR,RCC_CR_HSION); //16Mhz
-while(!(RCC->CR & (SET_BIT(RCC->CR,RCC_CR_HSIRDY))));
-RCC->PLLCFGR =(PLL_M << RCC_CFGR_PLLM);//SET_BIT(RCC_CFGR_PLLM,PLL_M);
-RCC->PLLCFGR =(PLL_N << RCC_CFGR_PLLN);//SET_BIT(RCC_CFGR_PLLN,PLL_N);
-RCC->PLLCFGR =(PLL_P << RCC_CFGR_PLLP);//SET_BIT(RCC_CFGR_PLLP,PLL_P);
-SET_BIT(RCC->PLLCFGR,RCC_PLLCFGR_SRC_HSI);
-
-SET_BIT(RCC->CFGR,HPRE_CLOCK_DIV_1);
-SET_BIT(RCC->CFGR,PPRE1_CLOCK_DIV2);
-SET_BIT(RCC->CFGR,PPRE2_CLOCK_DIV1);
-
-SET_BIT(RCC->CFGR,RCC_PLL_SW);
-while(!(RCC->CFGR & RCC_PLL_SWS));
-#else // HSE_PLL_CLOCK
-SET_BIT(RCC->CR, RCC_CR_HSEON); //8MHZ
-while(!(RCC->CR & (SET_BIT(RCC->CR,RCC_CR_HSERDY))));
-RCC->PLLCFGR =(PLL_M << RCC_CFGR_PLLM);//SET_BIT(RCC_CFGR_PLLM,PLL_M);
-RCC->PLLCFGR =(PLL_N << RCC_CFGR_PLLN);//SET_BIT(RCC_CFGR_PLLN,PLL_N);
-RCC->PLLCFGR =(PLL_P << RCC_CFGR_PLLP);//SET_BIT(RCC_CFGR_PLLP,PLL_P);
-SET_BIT(RCC->PLLCFGR,RCC_PLLCFGR_SRC_HSE);
-
-SET_BIT(RCC->CFGR,HPRE_CLOCK_DIV_1);
-SET_BIT(RCC->CFGR,PPRE1_CLOCK_DIV2);
-SET_BIT(RCC->CFGR,PPRE2_CLOCK_DIV1);
-SET_BIT(RCC->CFGR,RCC_PLL_SW);
-while(!(RCC->CFGR & RCC_PLL_SWS));
+	uint32 NMask;
+	uint32 HPRE = 0;
+#if HSE_CLOCK_ENABLE
+	HAL_RCC_HSE_ON();
+#else
+	HAL_RCC_HSI_ON();
 #endif
-SET_BIT(RCC->CR, RCC_CR_PLL);
-while(!(RCC->CR &(SET_BIT(RCC->CR,RCC_CR_PLLRDY))));
+	RCC->APB1ENR |=RCC_PWRENR;
+	PWR->PWR_CR |=PWR_CR_VOS;
+	FLASH->ACR |= FLASH_ACR_ICEN | FLASH_ACR_DCEN | FLASH_ACR_PRFTEN | FLASH_ACR_LATENCY_3WS ;
+
+
+	//AHB Prescaler
+	if(AHBPre)
+	{
+	while(AHBPre /2 !=1)
+	{
+		AHBPre = AHBPre/2;
+		HPRE ++;
+	}
+	HPRE +=7;
+	}
+	RCC->CFGR &=~ (0xF << HPRE_CLOCK_POS);
+	RCC->CFGR |= (HPRE << HPRE_CLOCK_POS);
+	// APB1 Prescaler
+	uint32 PPRE1 = 0;
+	if(APB1Pre)
+	{
+		while((APB1Pre & 1) == 0 )
+		{
+			PPRE1++;
+			APB1Pre = APB1Pre >> 1;
+		}
+		PPRE1 +=3;
+	}
+	RCC->CFGR &=~ (0x7 << PPRE1_CLOCK_POS);
+	RCC->CFGR |= (PPRE1 << PPRE1_CLOCK_POS);
+	// APB2 Prescaler
+	uint32 PPRE2 = 0 ;
+	if(APB2Pre)
+	{
+		while((APB2Pre & 1) == 0 )
+		{
+			PPRE2 ++;
+			APB2Pre = APB2Pre >> 1;
+
+		}
+		PPRE2 +=3;
+	}
+	RCC->CFGR &=~ (0x7 << PPRE2_CLOCK_POS);
+	RCC->CFGR |= (PPRE2 << PPRE2_CLOCK_POS);
 }
 
 void HAL_RCC_SetSystemClockTo16Mhz(void)
 {
-	SET_BIT(RCC->CR,RCC_CR_HSION);
-    while(!(RCC->CR & (SET_BIT(RCC->CR,RCC_CR_HSIRDY))));
-	RCC->CFGR |= HPRE_CLOCK_DIV_1;
+	HAL_RCC_HSI_ON();
+	RCC->CFGR |= HPRE_CLOCK_DIV_1 <<4;
 	RCC->CFGR |= PPRE1_CLOCK_DIV1 <<10;
 	RCC->CFGR |= PPRE2_CLOCK_DIV1 <<13;
 	SET_BIT(RCC->CFGR,RCC_HSI_SW);
@@ -54,9 +78,8 @@ void HAL_RCC_SetSystemClockTo16Mhz(void)
 }
 void HAL_RCC_SetSystemClockTo8Mhz(void)
 {
-		SET_BIT(RCC->CR,RCC_CR_HSEON);
-		while((RCC->CR & (SET_BIT(RCC->CR,RCC_CR_HSERDY))));
-		RCC->CFGR |= HPRE_CLOCK_DIV_1;
+		HAL_RCC_HSE_ON();
+		RCC->CFGR |= HPRE_CLOCK_DIV_1 <<4;
 		RCC->CFGR |= PPRE1_CLOCK_DIV1 <<10;
 		RCC->CFGR |= PPRE2_CLOCK_DIV1 <<13;
 		CLR_BIT(RCC->CFGR,RCC_HSE_SW);
@@ -64,16 +87,42 @@ void HAL_RCC_SetSystemClockTo8Mhz(void)
 		RCC->CR &=~ RCC_CR_HSION;
 }
 
-void HAL_RCC_SetSystemClock()
+static void HAL_RCC_HSE_ON()
 {
-#if HSI_CLOCK_ENABLE
-	HAL_RCC_SetSystemClockTo16Mhz();
-#elif HSE_CLOCK_ENABLE
-	HAL_RCC_SetSystemClockTo8Mhz();
-#else
-	HAL_RCC_SetSystemClockByPLL();
-#endif
+	RCC->CR |= RCC_CR_HSEON;
+	while(RCC->CR & RCC_CR_HSERDY);
 }
+
+static void HAL_RCC_HSI_ON()
+{
+	RCC->CR |= RCC_CR_HSION;
+	while(RCC->CR & RCC_CR_HSION);
+}
+
+static void HAL_RCC_PLL_ON()
+{
+	RCC->CR |= RCC_CR_PLL;
+	while(RCC->CR & RCC_CR_PLLRDY);
+}
+
+uint32 HAL_RCC_SET_PLL_CLOCK()
+{
+	uint32 PLL_SRC = 0;
+	uint32 PLL_CLOCK_SPEED;
+	if(RCC->PLLCFGR & (1U<<22))
+	{
+		PLL_SRC = HSECLOCKSPEED;
+	}
+	else
+	{
+		PLL_SRC = HSICLOCKSPEED;
+	}
+
+	return PLL_CLOCK_SPEED;
+
+}
+/////////////////////////////
+
 void HAL_GPIOA_ENABLE_CLOCK()
 {
 	RCC->AHB1ENR |= RCC_GPIOAENR;
