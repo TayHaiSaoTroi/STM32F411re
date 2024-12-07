@@ -119,6 +119,11 @@ typedef struct PWR
 #define HSECLOCKSPEED 8U
 #define HSICLOCKSPEED 16U
 
+#if HSI_CLOCK_ENABLE
+#define PLL_CLOCK 16
+#else
+#define PLL_CLOCK 8
+#endif
 
 // HPRE	AHB precaler
 #define HPRE_CLOCK_POS			(4U) // AHBP Prescaler
@@ -166,7 +171,10 @@ void HAL_RCC_SetSystemClockByPLL(uint32 SysClc, uint32 AHBPre, uint32 APB1Pre, u
 void HAL_RCC_SetSystemClockTo16Mhz(void);
 void HAL_RCC_SetSystemClockTo8Mhz(void);
 
-uint32 HAL_RCC_SET_PLL_CLOCK();
+uint32 HAL_RCC_GET_PLLCLOCK();
+uint32 HAL_RCC_GET_AHBPre();
+uint32 HAL_RCC_GET_APB1Pre();
+uint32 HAL_RCC_GET_APB2Pre();
 //GPIO Clock
 void HAL_GPIOA_ENABLE_CLOCK();
 void HAL_GPIOB_ENABLE_CLOCK();
