@@ -161,6 +161,23 @@ void HAL_RCC_SetSystemClockTo8Mhz(void)
 		RCC->CR &=~ RCC_CR_HSION;
 }
 
+inline uint32 HAL_RCC_GET_AHBPre(uint32 SysClk, uint32 AHBPre_Div)
+{
+
+	SysClk = SysClk / AHBPre_Div;
+	return SysClk;
+}
+
+inline uint32 HAL_RCC_GET_APB1Pre(uint32 SysClk,uint32 AHBPre_Div ,uint32 APB1Pre_Div)
+{
+	return SysClk / AHBPre_Div / APB1Pre_Div;
+}
+
+inline uint32 HAL_RCC_GET_APB2Pre(uint32 SysClk, uint32 AHBPre_Div,uint32 APB2Pre_Div)
+{
+	return SysClk / AHBPre_Div / APB2Pre_Div;
+}
+
 static void HAL_RCC_HSE_ON()
 {
 	RCC->CR |= RCC_CR_HSEON;
