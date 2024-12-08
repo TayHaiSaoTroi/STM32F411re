@@ -171,10 +171,9 @@ void HAL_RCC_SetSystemClockByPLL(uint32 SysClc, uint32 AHBPre, uint32 APB1Pre, u
 void HAL_RCC_SetSystemClockTo16Mhz(void);
 void HAL_RCC_SetSystemClockTo8Mhz(void);
 
-uint32 HAL_RCC_GET_PLLCLOCK();
-uint32 HAL_RCC_GET_AHBPre();
-uint32 HAL_RCC_GET_APB1Pre();
-uint32 HAL_RCC_GET_APB2Pre();
+inline uint32 HAL_RCC_GET_AHBPre(uint32 SysClk, uint32 AHBPre_Div);
+inline uint32 HAL_RCC_GET_APB1Pre(uint32 SysClk,uint32 AHBPre_Div,uint32 APB1Pre_Div);
+inline uint32 HAL_RCC_GET_APB2Pre(uint32 SysClk, uint32 AHBPre_Div,uint32 APB2Pre_Div);
 //GPIO Clock
 void HAL_GPIOA_ENABLE_CLOCK();
 void HAL_GPIOB_ENABLE_CLOCK();
